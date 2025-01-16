@@ -11,3 +11,4 @@ COM接口都以大写字母“I”作为开头
 2D纹理（2D texture）是一种由数据元素构成的矩阵（可将此“矩阵”看作2D数组）可用作存储2D图像数据（这种情况下，纹理中的每个元素存储的都是一个像素的颜色）  
 1D,2D,3D纹理就相当于特定数据元素所构成的1D,2D,3D数组  
 并不是任意类型的数据元素都能用于组成纹理，只能存储[DXGI_FORMAT](https://learn.microsoft.com/en-us/windows/win32/api/dxgiformat/ne-dxgiformat-dxgi_format)枚举类型中描述的特定格式的数据元素
+

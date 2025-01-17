@@ -12,3 +12,4 @@ COM接口都以大写字母“I”作为开头
 1D,2D,3D纹理就相当于特定数据元素所构成的1D,2D,3D数组  
 并不是任意类型的数据元素都能用于组成纹理，只能存储[DXGI_FORMAT](https://learn.microsoft.com/en-us/windows/win32/api/dxgiformat/ne-dxgiformat-dxgi_format)枚举类型中描述的特定格式的数据元素
 
+![图片](Chapter4/2.png)  

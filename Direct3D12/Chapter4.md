@@ -392,3 +392,118 @@ void CreateRenderTargetView(
 ![图片](Chapter4/43.png)
 ![图片](Chapter4/44.png)
 ![图片](Chapter4/45.png)
+
+### 创建深度/模板缓冲区及其视图
+深度缓冲区其实就是一种2D纹理
+纹理是一种GPU资源，因此我们需要通过编写[D3D12_RESOURCE_DESC structure (d3d12.h)](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_resource_desc)结构体来描述资源，再用[ID3D12Device::CreateCommittedResource method (d3d12.h)](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device-createcommittedresource)来创建
+
+```c++
+typedef struct D3D12_RESOURCE_DESC {
+  D3D12_RESOURCE_DIMENSION Dimension;
+  UINT64                   Alignment;
+  UINT64                   Width;
+  UINT                     Height;
+  UINT16                   DepthOrArraySize;
+  UINT16                   MipLevels;
+  DXGI_FORMAT              Format;
+  DXGI_SAMPLE_DESC         SampleDesc;
+  D3D12_TEXTURE_LAYOUT     Layout;
+  D3D12_RESOURCE_FLAGS     Flags;
+} D3D12_RESOURCE_DESC;
+```
+![图片](Chapter4/46.png)
+![图片](Chapter4/47.png)
+GPU资源都存储在堆（heap）中，本质是具有特定属性的GPU显存块。
+[ID3D12Device::CreateCommittedResource method (d3d12.h)](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device-createcommittedresource)方法将根据我们提供的属性创建一个资源与一个堆
+
+```c++
+HRESULT CreateCommittedResource(
+  [in]            const D3D12_HEAP_PROPERTIES *pHeapProperties,
+  [in]            D3D12_HEAP_FLAGS            HeapFlags,
+  [in]            const D3D12_RESOURCE_DESC   *pDesc,
+  [in]            D3D12_RESOURCE_STATES       InitialResourceState,
+  [in, optional]  const D3D12_CLEAR_VALUE     *pOptimizedClearValue,
+  [in]            REFIID                      riidResource,
+  [out, optional] void                        **ppvResource
+);
+
+typedef struct D3D12_HEAP_PROPERTIES {
+  D3D12_HEAP_TYPE         Type;
+  D3D12_CPU_PAGE_PROPERTY CPUPageProperty;
+  D3D12_MEMORY_POOL       MemoryPoolPreference;
+  UINT                    CreationNodeMask;
+  UINT                    VisibleNodeMask;
+} D3D12_HEAP_PROPERTIES;
+```
+[D3D12_HEAP_PROPERTIES structure (d3d12.h)](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_heap_properties)
+
+![图片](Chapter4/48.png)
+![图片](Chapter4/49.png)
+[D3D12_CLEAR_VALUE structure (d3d12.h)](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_clear_value)
+![图片](Chapter4/50.png)
+
+为了性能达到最佳，通常应该将资源放置于默认堆中，只有在需要使用上传堆或回读堆的特性之时才应选用其他类型的堆
+
+在使用深度/模板缓冲区之前，一定要创建相关的深度/模板视图，并将其绑定到渲染流水线上
+![图片](Chapter4/51.png)
+![图片](Chapter4/52.png)
+![图片](Chapter4/53.png)
+command list的resource baarrier
+[CD3DX12_HEAP_PROPERTIES structure](https://learn.microsoft.com/en-us/windows/win32/direct3d12/cd3dx12-heap-properties)
+```c++
+struct CD3DX12_HEAP_PROPERTIES  : public D3D12_HEAP_PROPERTIES{
+       CD3DX12_HEAP_PROPERTIES();
+       explicit CD3DX12_HEAP_PROPERTIES(const D3D12_HEAP_PROPERTIES &o);
+       CD3DX12_HEAP_PROPERTIES(D3D12_CPU_PAGE_PROPERTY cpuPageProperty, D3D12_MEMORY_POOL memoryPoolPreference, UINT creationNodeMask = 1, UINT nodeMask = 1);
+       explicit CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE type, UINT creationNodeMask = 1, UINT nodeMask = 1);
+       operator const D3D12_HEAP_PROPERTIES&() const;
+  bool inline operator==( const D3D12_HEAP_PROPERTIES& l, const D3D12_HEAP_PROPERTIES& r );
+  bool inline operator!=( const D3D12_HEAP_PROPERTIES& l, const D3D12_HEAP_PROPERTIES& r );
+};
+```
+
+[ID3D12Device::CreateDepthStencilView method (d3d12.h)](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device-createdepthstencilview)的第二个参数是指向[D3D12_DEPTH_STENCIL_DESC structure (d3d12.h)](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_depth_stencil_desc)的结构体的指针
+如果资源在创建时已指定了具体格式，则可把此参数设置为空指针，表示此资源创建时的格式为他的第一个mipmap层级创建一个视图
+
+### 设置视口
+![图片](Chapter4/54.png)
+这种矩形子窗口叫**视口**（viewport）并用[D3D12_VIEWPORT structure (d3d12.h)](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_viewport)描述
+
+```c++
+typedef struct D3D12_VIEWPORT {
+  FLOAT TopLeftX;
+  FLOAT TopLeftY;
+  FLOAT Width;
+  FLOAT Height;
+  FLOAT MinDepth;
+  FLOAT MaxDepth;
+} D3D12_VIEWPORT;
+```
+前四个成员定义了视口矩形相对于后台缓冲区的绘制范围，因为是FLOAT类型，所以支持小数
+MinDepth和MaxDepth这两个成员负责将深度值从区间[0,1]转换到区间[MinDepth,MaxDepth]，可实现某种特效，大多数情况下都将MinDepth和MaxDepth设置为0和1
+只要填写好D3D12_VIEWPORT structure (d3d12.h)便可用[ID3D11DeviceContext::RSSetViewports method (d3d11.h)](https://learn.microsoft.com/en-us/windows/win32/api/d3d11/nf-d3d11-id3d11devicecontext-rssetviewports)来设置Direct3D中的视口
+![图片](Chapter4/55.png)
+第一个参数是要绑定的视口数量（有些高级效果需要使用多个视口）第二个参数是一个指向视口数组的指针（多视口可以用作多人游戏分屏这种）
+不能为同一个渲染目标指定多个视口，而多视口则是一种用于多个渲染目标同时进行渲染的高级技术
+命令列表一旦被重置，视口也就需要随之重置
+
+
+### 设置裁剪矩形
+后台缓冲区定义了一个**裁剪矩形**（scissor rectangle）在此矩形外的像素都会被删除（即这部分像素不会被光栅化（rasterize）至后台缓冲区）以此优化层序的性能，比如一个矩形UI元素覆于屏幕中某块区域的最上面
+裁剪矩形由类型为RECT的D3D12_RECT结构体（typedef RECT D3D12_RECT;）定义
+[RECT structure (windef.h)](https://learn.microsoft.com/en-us/windows/win32/api/windef/ns-windef-rect)
+```c++
+typedef struct tagRECT {
+  LONG left;
+  LONG top;
+  LONG right;
+  LONG bottom;
+} RECT, *PRECT, *NPRECT, *LPRECT;
+```
+在Direct3D中要用[ID3D11DeviceContext::RSSetScissorRects method (d3d11.h)](https://learn.microsoft.com/en-us/windows/win32/api/d3d11/nf-d3d11-id3d11devicecontext-rssetscissorrects)来设置裁剪矩形
+![图片](Chapter4/56.png)
+类似于RSSetViewports方法，RSSetScissorRects方法的第一个参数是裁剪矩形数，第二个指针是指向裁剪数组的指针
+
+不能为同一个渲染目标制定多个裁剪矩形。多裁剪矩形是一种同时对多个渲染目标进行渲染的高级技术
+
+裁剪矩形需要随着命令列表的重置而重置

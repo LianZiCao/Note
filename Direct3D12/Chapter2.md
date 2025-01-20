@@ -41,6 +41,8 @@
 
 DirectXMath以定义在`DirectXMath.h`头文件中的`XMMATRIX`类来表示4x4矩阵
 
+[DirectXMath文档](https://learn.microsoft.com/en-us/windows/win32/api/_dxmath/)
+
 构造函数
 ![图片](Chapter2/16.png)  
 ![图片](Chapter2/17.png)  

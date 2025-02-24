@@ -9,7 +9,7 @@ C# 项目文件`.godot/mono`文件夹并不十分重要
 `.godot` 文件夹下的所有内容都可以安全地添加到你的版本控制系统的忽略列表中
 
 ### C# API 
-- 使用`PascalCase`命名法
+- 使用`PascalCase`命名法，而GDScript/C++使用的是`snake_case`
 - 附加 C# 脚本需要引用一个类，该类名需要匹配其文件名。
 - 托管（类似传递函数指针）原生api需要原始`snake_case`的命名
 
